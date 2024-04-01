@@ -10,23 +10,20 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'mp3', 'wav'}
 
-# returns JSON object as 
-# a dictionary
+# Load configuration from JSON file
 config = json.load(open('config.json'))
- 
+
+# Configure upload folder and API keys
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 DEEPGRAM_API_KEY = config['DEEPGRAM_API_KEY']
-openai_client = OpenAI(
-    # This is the default and can be omitted
-    api_key=config['OPENAI'],
-)
-TEXT_ANALYTICS_API_KEY = 'YOUR_TEXT_ANALYTICS_API_KEY'
-TEXT_ANALYTICS_ENDPOINT = 'https://<your-text-analytics-endpoint>.cognitiveservices.azure.com/text/analytics/v3.0/sentiment'
+openai_client = OpenAI(api_key=config['OPENAI_API_KEY'])
 
 def allowed_file(filename):
+    """Check if the file has an allowed extension"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def transcribe_audio(file_path):
+    """Transcribe audio file using Deepgram API"""
     url = "https://api.deepgram.com/v1/listen"
     headers = {
         'Authorization': 'Token {}'.format(DEEPGRAM_API_KEY),
@@ -40,7 +37,7 @@ def transcribe_audio(file_path):
     response = requests.post(url, headers=headers, params=params, files=files)
     if response.status_code == 200:
         transcriptions = response.json().get('results', {}).get('utterances', [{}])
-        # ".results.utterances[] | \"[Speaker:\(.speaker)] \(.transcript)\""
+        # Parse transcriptions into separate dialogues
         current_sentence = ''
         current_speaker = ''
         transcript = []
@@ -59,12 +56,14 @@ def transcribe_audio(file_path):
         return 'Transcription failed'
 
 def analyze_sentiment(transcriptions):
-    # Specify the OpenAI model for sentiment analysis (consider alternatives)
+    """Analyze sentiment of transcribed text using OpenAI API"""
+    # Concatenate transcriptions into a single text
     text = ''
     i = 0
     for transcription in transcriptions:
         text = text + '[{}] Speaker {}:{}\n'.format(i + 1, transcription['speaker'] + 1, transcription['says'])
         i = i + 1
+    # Generate sentiment analysis using OpenAI
     response = openai_client.chat.completions.create(
         messages=[
             {
@@ -80,7 +79,7 @@ def analyze_sentiment(transcriptions):
         ],
         model="gpt-3.5-turbo",
     )
-    print(response)
+    # Extract sentiment analysis from OpenAI response
     reply = ''
     for res in response.choices:
         reply = reply + res.message.content.strip() + '\n'
@@ -88,10 +87,12 @@ def analyze_sentiment(transcriptions):
 
 @app.route('/')
 def upload_form():
+    """Render upload form"""
     return render_template('upload.html')
 
 @app.route('/', methods=['POST'])
 def upload_file():
+    """Handle file upload and perform transcription and sentiment analysis"""
     if 'file' not in request.files:
         return 'No file part'
     file = request.files['file']
@@ -103,8 +104,6 @@ def upload_file():
         file.save(file_path)
         transcriptions = transcribe_audio(file_path)
         sentiment = analyze_sentiment(transcriptions)
-        print(sentiment)
-        #sentiment = ''
         return render_template('upload.html', transcription=transcriptions, sentiment=sentiment)
     else:
         return 'Invalid file format'
