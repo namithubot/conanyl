@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Analysis</title>
+  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-900 text-white">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-center text-3xl font-bold mb-8">Upload Audio File</h1>
+    <form method="POST" enctype="multipart/form-data" class="flex flex-col items-center">
+      <input type="file" name="file" accept=".mp3, .wav" required
+        class="w-full max-w-md rounded-md border border-gray-300 p-2 mb-4">
+      <button type="submit" value="Upload"
+        class="w-full max-w-md px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-700">Upload</button>
+    </form>
+  </div>
+
+  <div class="transcription container mx-auto px-4 py-8">
+    <h2 class="text-xl font-bold mb-4">Transcription</h2>
+    <div class="grid grid-cols-1 gap-4">
+      {% for transcript in transcription %}
+      <div class="dialogue border border-gray-600 rounded-md p-4">
+        <span class="text-gray-400">Dialogue {{ loop.index + 1 }}</span>
+        <span class="text-gray-200 block">Speaker {{ transcript['speaker'] + 1 }}:</span>
+        <span class="text-gray-100">{{ transcript['says'] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="sentiment-analysis bg-gray-800 text-gray-200 py-8">
+    <div class="container mx-auto px-4">
+      <h2 class="text-xl font-bold mb-4">Sentiment Analysis</h2>
+      <p class="whitespace-pre-wrap">{{ sentiment }}</p>
+    </div>
+  </div>
+</body>
+
+</html>
